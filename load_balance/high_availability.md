@@ -21,13 +21,13 @@
  - LB主动对后端REAL SERVER健康探测；
  
 ## LB+OSPF组网  
- ![路由](images/lb_route.jpg)
+ ![路由](images/lb_route.jpg)   
  一个LB集群会部署在一个机房的两个机柜中，机柜的交换机直连入口交换机；根据奇偶IP路由到不同交换机上，并且机柜交换机之间形成一个OSPF域。  
  一个LB集群在每个机柜会部署两台LB服务器，两个机柜的4台LB服务器会组成一个OSPF域。当任一节点或链路故障时，网络依靠OSPF进行故障收敛，自动切换流量到其它可用的节点上。
 
 ## 一致性HASH
 Google在它的一篇关于负载均衡的论文（Maglev: A Fast and Reliable Software Network Load Balancer）中提到了它们用的一种一致性hash算法，然后我们参考他的论文实现了这个算法。  
-由于论文上原始算法是对后端real server均匀负载的，但我们希望VGW还要有流量调度功能，即根据配置不同的weight值来调度每台real server不同的流量；然后我们对算法做了一些修改。  
+由于论文上原始算法是对后端real server均匀负载的，但我们希望LB还要有流量调度功能，即根据配置不同的weight值来调度每台real server不同的流量；然后我们对算法做了一些修改。  
 评价一致性hash的好坏，主要关注以下两点：  
 -	平衡性(Balance)：  
 平衡性是指哈希的结果能够尽可能均衡的分布到所有的节点中去，很多哈希算法都能够满足这一条件。
@@ -36,7 +36,7 @@ Google在它的一篇关于负载均衡的论文（Maglev: A Fast and Reliable S
 
 ![hash](images/hash_table_test.jpg)  
 
-上图是有节点变化时，VGW maglev hash 的单调性转发，上图模拟了两种场景（原有三个转发的节点）:
+上图是有节点变化时，maglev hash 的单调性转发，上图模拟了两种场景（原有三个转发的节点）:
 -  有单点故障时（2节点故障）  
   可以看到原来转发到 1、3节点的流量仍然转发到1、3节点；  
   原来转发到2节点的流量被均匀分布到另外两个节点上；
@@ -70,7 +70,7 @@ LB 和LVS的keepalived 实现原理一样，可以实现两种健康检查。
 
 对LVS管理软件keepalived进行了一些优化：
 - 优化了网络异步模型，select改为epoll方式；
-  原来的keepalived程序是用的select模型，当探测的连接数比较多时，select模型就不合适了，我们的VGW改用的epoll模型，在测试环境我们可以做到对10000个real server端口做健康探测。
+  原来的keepalived程序是用的select模型，当探测的连接数比较多时，select模型就不合适了，我们的LB改用的epoll模型，在测试环境我们可以做到对10000个real server端口做健康探测。
 - 将健康检查逻辑和LB程序集成，由一个单独线程完成健康检查任务；
 健康检查线程和LB主线程通过队列实时传递消息，保证了LB可以及时响应健康检查结果。
 
